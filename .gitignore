@@ -4,7 +4,6 @@ data
 待上传服务器
 AGENTS.md
 PROJECT.md
-README.md
 DEPLOYMENT.md
 tests
 vitest.config.ts
