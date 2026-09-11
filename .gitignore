@@ -20,9 +20,9 @@ vitest.config.ts
 .luodian-key
 tsconfig.tsbuildinfo
 
-# Public repository boundary
-!PROJECT.md
-!DEPLOYMENT.md
+# Codex-only local working documents
+/PROJECT.md
+/DEPLOYMENT.md
 findings.md
 progress.md
 task_plan.md
