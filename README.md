@@ -129,23 +129,9 @@ curl http://127.0.0.1:3088/api/health
 
 查看 `docker compose ps` 或启动日志中的端口错误，然后使用 `LUODIAN_PORT` 换一个未占用的端口，重新启动并用新端口访问。
 
-### AI 分析报错
-
-在设置页分别检查“普通 API 计量”和“Token Plan / Coding Plan”的接口地址、模型名称和 API Key。接口必须兼容 OpenAI Chat Completions；不要把完整的 `Bearer` 前缀手动填进 API Key 字段。Xiaomi MiMo Token Plan 要使用 Token Plan 页面提供的专属 `tp-` Key 和对应区域 Base URL，不能把普通付费接口的 `sk-` Key 混用。其他服务商如果协议不同，可在对应配置卡打开“高级兼容设置”按文档调整。还应确认服务器能访问所选接口，必要时查看：
-
-```bash
-docker compose logs --tail=200 luodian
-```
-
-如果页面列出了“Agent 自行研究 / 决策”事项，说明这些是可以由执行 Agent 查证或选择的技术细节，不是必须由用户回答的问题。只有仍会改变用户意图、范围、优先级、受众、授权或验收的事项才会进入当前关键问题。确实需要先产出版本时，可以在详情页使用“强制收口并生成”，但未确认内容会被记录为开放决策，执行 Agent 会采用保守默认值。
-
-旧版本数据库升级时，启动脚本会为追问记录补充 `resolution` 字段，并按已有回答回填为 `answered` 或 `pending`；不会删除想法、问答或提示词版本。
-
-旧版本设置表启动时会自动补充 `provider_options_json` 和 `provider_profiles_json` 列，旧版想法表会补充 `provider_kind` 列；旧的单配置会继续作为兼容配置读取，不会删除已保存的 API Key。新建或重新分析想法时，如果两组配置都完整，落点会要求选择本次使用的接口，并把选择绑定到该想法。
-
 ## 数据与隐私
 
-Compose 会创建名为 `luodian_data` 的 Docker 数据卷，用于保存 SQLite 数据、想法内容、问答记录、提示词版本以及加密 API Key 所需的数据密钥。不要把这个数据卷、运行时数据或 API Key 上传到 GitHub。
+Compose 会创建名为 `luodian_data` 的 Docker 数据卷，用于保存 SQLite 数据、想法内容、问答记录、提示词版本以及加密 API Key 所需的数据密钥。不要把这个数据卷、运行时数据或 API Key 透露给任何人。
 
 ## 停止与结束运行
 
