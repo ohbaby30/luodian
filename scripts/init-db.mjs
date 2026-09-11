@@ -11,17 +11,19 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY CHECK (id = 1), admin_password_hash TEXT,
     provider_base_url TEXT, provider_model TEXT, provider_api_key TEXT,
+    provider_options_json TEXT NOT NULL DEFAULT '{}',
+    provider_profiles_json TEXT NOT NULL DEFAULT '{}',
     profile_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS ideas (
     id TEXT PRIMARY KEY, title TEXT NOT NULL, raw_text TEXT NOT NULL, target TEXT NOT NULL,
     status TEXT NOT NULL, latest_analysis_json TEXT, created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL, archived_at TEXT
+    updated_at TEXT NOT NULL, archived_at TEXT, provider_kind TEXT
   );
   CREATE TABLE IF NOT EXISTS turns (
     id TEXT PRIMARY KEY, idea_id TEXT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
     question TEXT NOT NULL, reason TEXT NOT NULL, answer TEXT, sequence INTEGER NOT NULL,
-    created_at TEXT NOT NULL, answered_at TEXT
+    created_at TEXT NOT NULL, answered_at TEXT, resolution TEXT NOT NULL DEFAULT 'pending'
   );
   CREATE TABLE IF NOT EXISTS analysis_snapshots (
     id TEXT PRIMARY KEY, idea_id TEXT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
@@ -39,5 +41,27 @@ db.exec(`
   INSERT OR IGNORE INTO settings (id, profile_json, created_at, updated_at)
     VALUES (1, '{}', datetime('now'), datetime('now'));
 `);
+const settingsColumns = db.prepare("PRAGMA table_info(settings)").all();
+if (!settingsColumns.some((column) => column.name === "provider_options_json")) {
+  db.exec("ALTER TABLE settings ADD COLUMN provider_options_json TEXT NOT NULL DEFAULT '{}'");
+}
+if (!settingsColumns.some((column) => column.name === "provider_profiles_json")) {
+  db.exec("ALTER TABLE settings ADD COLUMN provider_profiles_json TEXT NOT NULL DEFAULT '{}'");
+}
+const ideaColumns = db.prepare("PRAGMA table_info(ideas)").all();
+if (!ideaColumns.some((column) => column.name === "provider_kind")) {
+  db.exec("ALTER TABLE ideas ADD COLUMN provider_kind TEXT");
+}
+const turnColumns = db.prepare("PRAGMA table_info(turns)").all();
+if (!turnColumns.some((column) => column.name === "resolution")) {
+  db.exec("ALTER TABLE turns ADD COLUMN resolution TEXT NOT NULL DEFAULT 'pending'");
+}
+db.exec(`
+  UPDATE turns
+  SET resolution = CASE
+    WHEN answer IS NOT NULL AND length(trim(answer)) > 0 THEN 'answered'
+    ELSE 'pending'
+  END
+  WHERE resolution IS NULL OR resolution = '' OR resolution = 'pending';
+`);
 db.close();
-

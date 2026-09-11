@@ -26,6 +26,8 @@ function initializeDatabase(db: DatabaseSync): void {
       provider_base_url TEXT,
       provider_model TEXT,
       provider_api_key TEXT,
+      provider_options_json TEXT NOT NULL DEFAULT '{}',
+      provider_profiles_json TEXT NOT NULL DEFAULT '{}',
       profile_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -40,7 +42,8 @@ function initializeDatabase(db: DatabaseSync): void {
       latest_analysis_json TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      archived_at TEXT
+      archived_at TEXT,
+      provider_kind TEXT
     );
 
     CREATE TABLE IF NOT EXISTS turns (
@@ -51,7 +54,8 @@ function initializeDatabase(db: DatabaseSync): void {
       answer TEXT,
       sequence INTEGER NOT NULL,
       created_at TEXT NOT NULL,
-      answered_at TEXT
+      answered_at TEXT,
+      resolution TEXT NOT NULL DEFAULT 'pending'
     );
 
     CREATE TABLE IF NOT EXISTS analysis_snapshots (
@@ -79,6 +83,46 @@ function initializeDatabase(db: DatabaseSync): void {
     INSERT OR IGNORE INTO settings (id, profile_json, created_at, updated_at)
     VALUES (1, '{}', datetime('now'), datetime('now'));
   `);
+  migrateTurnsResolution(db);
+  migrateProviderOptions(db);
+  migrateProviderProfiles(db);
+  migrateIdeaProviderKind(db);
+}
+
+export function migrateTurnsResolution(db: DatabaseSync): void {
+  const columns = db.prepare("PRAGMA table_info(turns)").all() as Array<{ name: string }>;
+  if (!columns.some((column) => column.name === "resolution")) {
+    db.exec("ALTER TABLE turns ADD COLUMN resolution TEXT NOT NULL DEFAULT 'pending'");
+  }
+  db.exec(`
+    UPDATE turns
+    SET resolution = CASE
+      WHEN answer IS NOT NULL AND length(trim(answer)) > 0 THEN 'answered'
+      ELSE 'pending'
+    END
+    WHERE resolution IS NULL OR resolution = '' OR resolution = 'pending';
+  `);
+}
+
+export function migrateProviderOptions(db: DatabaseSync): void {
+  const columns = db.prepare("PRAGMA table_info(settings)").all() as Array<{ name: string }>;
+  if (!columns.some((column) => column.name === "provider_options_json")) {
+    db.exec("ALTER TABLE settings ADD COLUMN provider_options_json TEXT NOT NULL DEFAULT '{}'");
+  }
+}
+
+export function migrateProviderProfiles(db: DatabaseSync): void {
+  const columns = db.prepare("PRAGMA table_info(settings)").all() as Array<{ name: string }>;
+  if (!columns.some((column) => column.name === "provider_profiles_json")) {
+    db.exec("ALTER TABLE settings ADD COLUMN provider_profiles_json TEXT NOT NULL DEFAULT '{}'");
+  }
+}
+
+export function migrateIdeaProviderKind(db: DatabaseSync): void {
+  const columns = db.prepare("PRAGMA table_info(ideas)").all() as Array<{ name: string }>;
+  if (!columns.some((column) => column.name === "provider_kind")) {
+    db.exec("ALTER TABLE ideas ADD COLUMN provider_kind TEXT");
+  }
 }
 
 export function getDb(): DatabaseSync {
@@ -94,8 +138,27 @@ export function getDb(): DatabaseSync {
   return db;
 }
 
+export function closeDb(): void {
+  globalForLuodian.luodianDb?.close();
+  delete globalForLuodian.luodianDb;
+  delete globalForLuodian.luodianDbPath;
+}
+
 export function nowIso(): string {
   return new Date().toISOString();
+}
+
+export function withTransaction<T>(callback: () => T): T {
+  const db = getDb();
+  db.exec("BEGIN");
+  try {
+    const result = callback();
+    db.exec("COMMIT");
+    return result;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function json<T>(value: T): string {
@@ -110,4 +173,3 @@ export function parseJson<T>(value: string | null | undefined, fallback: T): T {
     return fallback;
   }
 }
-

@@ -7,4 +7,12 @@ data
 .env
 .env.*
 !.env.example
-
+AGENTS.md
+PROJECT.md
+DEPLOYMENT.md
+tests
+vitest.config.ts
+findings.md
+progress.md
+task_plan.md
+docs

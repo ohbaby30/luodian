@@ -19,3 +19,11 @@ vitest.config.ts
 *.db-*
 .luodian-key
 tsconfig.tsbuildinfo
+
+# Public repository boundary
+!PROJECT.md
+!DEPLOYMENT.md
+findings.md
+progress.md
+task_plan.md
+docs/

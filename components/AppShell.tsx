@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { SourceLink } from "./Ui";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -14,7 +15,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="shell">
+    <main className={`shell ${pathname === "/" ? "page-enter" : ""}`}>
       <div className="shell-inner">
         <header className="topbar">
           <Link href="/" className="brand">
@@ -23,7 +24,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
           <nav className="flex items-center gap-1" aria-label="主导航">
             <Link className={`nav-link ${pathname === "/" ? "active" : ""}`} href="/">想法</Link>
-            <Link className={`nav-link ${pathname.startsWith("/settings") ? "active" : ""}`} href="/settings">规则</Link>
+            <Link className={`nav-link ${pathname.startsWith("/settings") ? "active" : ""}`} href="/settings">设置</Link>
+            <Link className={`nav-link ${pathname.startsWith("/archived") ? "active" : ""}`} href="/archived">已归档</Link>
+            <SourceLink />
             <button className="nav-link" onClick={logout}>退出</button>
           </nav>
         </header>
